@@ -1,6 +1,6 @@
 import requests
 
-from src.API.authentification import load_token
+from API.authentification import load_token
 
 def get_all_positions():
     API_KEY, SECRET_KEY = load_token()
@@ -52,7 +52,7 @@ def close_position(symbol):
 
     response = requests.delete(url, headers=headers)
 
-    if response.status_code == '200':
+    if str(response.status_code) == '200':
         return True
     else:
         return False
@@ -71,13 +71,14 @@ def create_order(symbol, amount, side='buy', type='market'):
 
     headers = {
         "accept": "application/json",
+        "content-type": "application/json",
         "APCA-API-KEY-ID": API_KEY,
         "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
-    response = requests.get(url, json=payload, headers=headers)
+    response = requests.post(url, json=payload, headers=headers)
 
-    if response.status_code == 200:
+    if str(response.status_code) == '200':
         return True
     else:
         return False
