@@ -1,0 +1,93 @@
+import gym
+# import pandas as pd
+from gym import spaces
+import numpy as np
+# from stable_baselines.common.env_checker import check_env
+
+class StockTradingEnv(gym.Env):
+    def __init__(self, data):
+        super(StockTradingEnv, self).__init__()
+
+        # Données de candlestick et indicateurs
+        self.data = data
+
+        # Espaces d'observation et d'action
+        self.observation_space = spaces.Box(low=0, high=np.inf, shape=(len(data.columns),), dtype=np.float32)
+        self.action_space = spaces.Discrete(3)  # Actions discrètes: 0 = vendre, 1 = conserver, 2 = acheter
+
+        # Variables d'état
+        self.current_step = 0
+        self.portfolio_value = 10000  # Valeur initiale du portefeuille
+        self.position = 0  # Position actuelle: -1 = short, 0 = cash, 1 = long
+
+        # Transfert amount
+        # self.buy_amount = 1000
+
+    def reset(self):
+        # Réinitialiser l'environnement à l'état initial
+        self.current_step = 0
+        self.portfolio_value = 10000
+        self.position = 0
+        return self._next_observation()
+
+    def step(self, action):
+        # Exécuter une action dans l'environnement et retourner le nouvel état, la récompense, et si l'épisode est terminé
+        assert self.action_space.contains(action)
+
+        self.current_step += 1
+        done = self.current_step >= len(self.data) - 1  # Terminer l'épisode à la fin des données
+
+        # Calculer la récompense
+        reward = self._calculate_reward(action)
+
+        # Mettre à jour le portefeuille en fonction de l'action
+        self._take_action(action)
+
+        # Obtenir la prochaine observation
+        obs = self._next_observation()
+
+        return obs, reward, done, {}
+
+    def _take_action(self, action):
+        # Mettre à jour le portefeuille en fonction de l'action
+        if action == 0:  # Vendre
+            if self.position == 1:  # Si long, vendre
+                self.portfolio_value += self.data.iloc[self.current_step - 1]['c']
+                self.position = 0
+        elif action == 1:  # Conserver
+            pass
+        elif action == 2:  # Acheter
+            if self.position == 0:  # Si cash, acheter
+            # if self.portfolio_value >=
+                self.portfolio_value -= self.data.iloc[self.current_step - 1]['c']
+                self.position = 1
+
+    def _next_observation(self):
+        # Retourner l'observation actuelle
+        return self.data.iloc[self.current_step].values
+
+    def _calculate_reward(self, action):
+        # Calculer la récompense en fonction de l'action
+        if action == 0:  # Vendre
+            if self.position == 1:  # Si long, calculer le rendement
+                return self.data.iloc[self.current_step - 1]['c'] - self.data.iloc[self.current_step]['c']
+            else:
+                return 0
+        elif action == 1:  # Conserver
+            if self.position == 1:
+                return self.data.iloc[self.current_step]['c'] - self.data.iloc[self.current_step - 1]['c']
+            else:
+                return 0
+        elif action == 2:  # Acheter
+            if self.position == 0:  # Si cash, pas de récompense immédiate
+            #     return 0
+                return self.data.iloc[self.current_step]['c'] - self.data.iloc[self.current_step - 1]['c']
+            else:
+                return 0
+    def render(self, mode='human'):
+        # Afficher une représentation visuelle de l'environnement (peut être vide dans cet exemple)
+        pass
+
+    def close(self):
+        # Fermer toutes les ressources si nécessaire
+        pass
