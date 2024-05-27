@@ -1,6 +1,6 @@
 import requests
 
-from src.API.authentification import load_token
+from API.authentification import load_token
 
 def get_all_positions():
     API_KEY, SECRET_KEY = load_token()
@@ -8,8 +8,8 @@ def get_all_positions():
 
     headers = {
         "accept": "application/json",
-        "APCA-API.txt-KEY-ID": API_KEY,
-        "APCA-API.txt-SECRET-KEY": SECRET_KEY
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
     response = requests.get(url, headers=headers)
@@ -21,8 +21,8 @@ def get_position(symbol):
 
     headers = {
         "accept": "application/json",
-        "APCA-API.txt-KEY-ID": API_KEY,
-        "APCA-API.txt-SECRET-KEY": SECRET_KEY
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
     response = requests.get(url, headers=headers)
@@ -34,8 +34,8 @@ def close_all_positions():
 
     headers = {
         "accept": "application/json",
-        "APCA-API.txt-KEY-ID": API_KEY,
-        "APCA-API.txt-SECRET-KEY": SECRET_KEY
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
     response = requests.delete(url, headers=headers)
@@ -46,13 +46,13 @@ def close_position(symbol):
 
     headers = {
         "accept": "application/json",
-        "APCA-API.txt-KEY-ID": API_KEY,
-        "APCA-API.txt-SECRET-KEY": SECRET_KEY
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
     response = requests.delete(url, headers=headers)
 
-    if response.status_code == '200':
+    if str(response.status_code) == '200':
         return True
     else:
         return False
@@ -71,13 +71,14 @@ def create_order(symbol, amount, side='buy', type='market'):
 
     headers = {
         "accept": "application/json",
-        "APCA-API.txt-KEY-ID": API_KEY,
-        "APCA-API.txt-SECRET-KEY": SECRET_KEY
+        "content-type": "application/json",
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
-    response = requests.get(url, json=payload, headers=headers)
+    response = requests.post(url, json=payload, headers=headers)
 
-    if response.status_code == 200:
+    if str(response.status_code) == '200':
         return True
     else:
         return False

@@ -161,5 +161,4 @@ cython_debug/
 
 # custom
 data/
-
-API.txt
+/logs/

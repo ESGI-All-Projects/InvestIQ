@@ -1,7 +1,7 @@
 import requests
 import json
 
-from src.API.authentification import load_token
+from API.authentification import load_token
 
 
 def get_account():
