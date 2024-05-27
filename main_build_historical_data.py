@@ -1,3 +1,4 @@
+
 from src.API.historical_data import get_historical_data
 
 symbols = "AAPL"
