@@ -20,14 +20,15 @@ class StockTradingEnv(gym.Env):
         self.portfolio_value = 10000  # Valeur initiale du portefeuille
         self.position = 0  # Position actuelle: -1 = short, 0 = cash, 1 = long
 
-        # Transfert amount
-        # self.buy_amount = 1000
+        # To calculate baseline
+        self.portfolio_value_base = 10000 - self.data.iloc[self.current_step]['c']
 
     def reset(self):
         # Réinitialiser l'environnement à l'état initial
         self.current_step = 0
         self.portfolio_value = 10000
         self.position = 0
+        self.portfolio_value_base = 10000 - self.data.iloc[self.current_step]['c']
         return self._next_observation()
 
     def step(self, action):
@@ -84,6 +85,15 @@ class StockTradingEnv(gym.Env):
                 return self.data.iloc[self.current_step]['c'] - self.data.iloc[self.current_step - 1]['c']
             else:
                 return 0
+
+    def calculate_buying_power(self):
+        if self.position == 1:
+            return self.portfolio_value + self.data.iloc[self.current_step - 1]['c']
+        else:
+            return self.portfolio_value
+
+    def calculate_buying_power_baseline(self):
+        return self.portfolio_value_base + self.data.iloc[self.current_step]['c']
     def render(self, mode='human'):
         # Afficher une représentation visuelle de l'environnement (peut être vide dans cet exemple)
         pass
