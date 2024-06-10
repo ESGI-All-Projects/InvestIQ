@@ -10,8 +10,8 @@ def get_account():
 
     headers = {
         "accept": "application/json",
-        "APCA-API.txt-KEY-ID": API_KEY,
-        "APCA-API.txt-SECRET-KEY": SECRET_KEY
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
     response = requests.get(url, headers=headers)
@@ -24,8 +24,8 @@ def get_account_portfolio_history(period="1A", timeframe="1D"):
 
     headers = {
         "accept": "application/json",
-        "APCA-API.txt-KEY-ID": API_KEY,
-        "APCA-API.txt-SECRET-KEY": SECRET_KEY
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
     params = {

@@ -12,8 +12,8 @@ def get_historical_data(symbol, start_date, end_date, timeframe):
 
     headers = {
         "accept": "application/json",
-        "APCA-API.txt-KEY-ID": API_KEY,
-        "APCA-API.txt-SECRET-KEY": SECRET_KEY
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
     params = {

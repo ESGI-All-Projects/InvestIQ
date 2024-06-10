@@ -9,8 +9,8 @@ def get_all_active_stocks():
 
     headers = {
         "accept": "application/json",
-        "APCA-API.txt-KEY-ID": API_KEY,
-        "APCA-API.txt-SECRET-KEY": SECRET_KEY
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
     response = requests.get(url, headers=headers)
@@ -29,8 +29,8 @@ def get_latest_bars(symbols):
 
     headers = {
         "accept": "application/json",
-        "APCA-API.txt-KEY-ID": API_KEY,
-        "APCA-API.txt-SECRET-KEY": SECRET_KEY
+        "APCA-API-KEY-ID": API_KEY,
+        "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
     params = {
