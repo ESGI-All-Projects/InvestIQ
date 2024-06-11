@@ -22,7 +22,7 @@ def train_LSTM_model(df):
     X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
 
     model = get_model(1)
-    model.fit(X_train, y_train, epochs=100, batch_size=32)
+    model.fit(X_train, y_train, epochs=10, batch_size=32)
 
     model.save("models/LSTM/lstm.keras")
 
@@ -88,28 +88,46 @@ def evaluate_model(df, model, dates):
 
     portfolio_value_IA = 10000
     portfolio_value_stock_evolution = 10000 - data.iloc[window_size]
-    position = 0
+    portfolio_value_my_algo = 10000
+    position_IA = 0
+    position_my_algo = 0
 
     previous_price = data.iloc[window_size]
     previous_price_IA = data.iloc[window_size]
 
     portfolio_value_IA_list = []
     portfolio_value_stock_evolution_list = []
+    portfolio_value_my_algo_list = []
     for price, pred in zip(data.iloc[window_size:], predictions):
         if pred < previous_price_IA:
-            if position == 1:
+            if position_IA == 1:
                 portfolio_value_IA += previous_price
-                position = 0
+                position_IA = 0
                 portfolio_value_IA_list.append(portfolio_value_IA)
             else:
                 portfolio_value_IA_list.append(portfolio_value_IA)
         else:
-            if position == 0:
+            if position_IA == 0:
                 portfolio_value_IA_list.append(portfolio_value_IA)
                 portfolio_value_IA -= previous_price
-                position = 1
+                position_IA = 1
             else:
                 portfolio_value_IA_list.append(portfolio_value_IA + previous_price)
+
+        if price < previous_price:
+            if position_my_algo == 1:
+                portfolio_value_my_algo += price
+                position_my_algo = 0
+                portfolio_value_my_algo_list.append(portfolio_value_my_algo)
+            else:
+                portfolio_value_my_algo_list.append(portfolio_value_my_algo)
+        else:
+            if position_my_algo == 0:
+                portfolio_value_my_algo_list.append(portfolio_value_my_algo)
+                portfolio_value_my_algo -= price
+                position_my_algo = 1
+            else:
+                portfolio_value_my_algo_list.append(portfolio_value_my_algo + price)
 
         portfolio_value_stock_evolution_list.append(portfolio_value_stock_evolution + previous_price)
         previous_price = price
@@ -119,6 +137,7 @@ def evaluate_model(df, model, dates):
     plt.figure(figsize=(10, 6))
     plt.plot(dates[window_size:], portfolio_value_IA_list, label='IA optimize Portfolio Value', color='red')
     plt.plot(dates[window_size:], portfolio_value_stock_evolution_list, label='Baseline Portfolio Value', color='blue')
+    plt.plot(dates[window_size:], portfolio_value_stock_evolution_list, label='My algo Portfolio Value', color='green')
     plt.xlabel('Dates')
     plt.ylabel('Portfolio Value')
     plt.title('AAPL : IA Portfolio Value vs. Baseline Over Time')
