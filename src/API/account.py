@@ -15,8 +15,9 @@ def get_account():
     }
 
     response = requests.get(url, headers=headers)
+    respose_json = json.loads(response.text)
 
-    return response.text
+    return respose_json
 
 def get_account_portfolio_history(period="1A", timeframe="1D"):
     API_KEY, SECRET_KEY = load_token()
