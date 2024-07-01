@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import datetime
+from tqdm import tqdm
 # from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
@@ -22,9 +23,9 @@ def train_LSTM_model(df):
     X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
 
     model = get_model(1)
-    model.fit(X_train, y_train, epochs=10, batch_size=32)
+    model.fit(X_train, y_train, epochs=200, batch_size=32)
 
-    model.save("models/LSTM/lstm.keras")
+    model.save("models/LSTM/lstm_1D.keras")
 
 
 def get_model(input_size):
@@ -60,10 +61,20 @@ def display_prediction(df, model):
 
     predictions = model.predict(X_test)
 
+    x0 = X_test[0]
+    predictions_long_term = []
+    for _ in tqdm(X_test):
+        p = model.predict(np.array([x0]))
+        predictions_long_term.append(p[0])
+
+        # Update x0 by removing the oldest value and adding the latest prediction
+        x0 = np.append(x0[1:], p[0]).reshape(window_size, 1)
+
     # Visualiser les prédictions
     plt.figure(figsize=(10, 6))
     plt.plot(y_test, color='blue', label='Prix réel')
     plt.plot(predictions, color='red', label='Prédictions')
+    plt.plot(predictions_long_term, color='black', label='Prédictions à long terme')
     plt.title('Prédiction du Prix des Actions')
     plt.xlabel('Temps')
     plt.ylabel('Prix des Actions')
@@ -75,13 +86,6 @@ def evaluate_model(df, model, dates):
 
     data = df['c']
     window_size = 30
-
-    data_momentum = []
-    beta = 0.995
-    m = data.iloc[window_size]
-    for d in data[window_size:]:
-        m = beta * m + (1 - beta) * d
-        data_momentum.append(m)
 
 
     X_test, y_test = [], []
@@ -96,18 +100,15 @@ def evaluate_model(df, model, dates):
 
     portfolio_value_IA = 10000
     portfolio_value_stock_evolution = 10000 - data.iloc[window_size]
-    portfolio_value_my_algo = 10000
+
     position_IA = 0
-    position_my_algo = 0
 
     previous_price = data.iloc[window_size]
     previous_price_IA = data.iloc[window_size]
-    previous_price_momentum = data_momentum[window_size]
 
     portfolio_value_IA_list = []
     portfolio_value_stock_evolution_list = []
-    portfolio_value_my_algo_list = []
-    for price, price_momentum, pred in zip(data.iloc[window_size:], data_momentum, predictions):
+    for price, pred in zip(data.iloc[window_size:], predictions):
         if pred < previous_price_IA:
             if position_IA == 1:
                 portfolio_value_IA += previous_price
@@ -123,46 +124,14 @@ def evaluate_model(df, model, dates):
             else:
                 portfolio_value_IA_list.append(portfolio_value_IA + previous_price)
 
-        # if price < previous_price:
-        #     if position_my_algo == 1:
-        #         portfolio_value_my_algo += price
-        #         position_my_algo = 0
-        #         portfolio_value_my_algo_list.append(portfolio_value_my_algo)
-        #     else:
-        #         portfolio_value_my_algo_list.append(portfolio_value_my_algo)
-        # else:
-        #     if position_my_algo == 0:
-        #         portfolio_value_my_algo_list.append(portfolio_value_my_algo)
-        #         portfolio_value_my_algo -= price
-        #         position_my_algo = 1
-        #     else:
-        #         portfolio_value_my_algo_list.append(portfolio_value_my_algo + price)
-
-        if price_momentum < previous_price_momentum:
-            if position_my_algo == 1:
-                portfolio_value_my_algo += price
-                position_my_algo = 0
-                portfolio_value_my_algo_list.append(portfolio_value_my_algo)
-            else:
-                portfolio_value_my_algo_list.append(portfolio_value_my_algo)
-        else:
-            if position_my_algo == 0:
-                portfolio_value_my_algo_list.append(portfolio_value_my_algo)
-                portfolio_value_my_algo -= price
-                position_my_algo = 1
-            else:
-                portfolio_value_my_algo_list.append(portfolio_value_my_algo + price)
-
         portfolio_value_stock_evolution_list.append(portfolio_value_stock_evolution + previous_price)
         previous_price = price
         previous_price_IA = pred
-        previous_price_momentum = price_momentum
 
     # Tracer les résultats
     plt.figure(figsize=(10, 6))
     plt.plot(dates[window_size:], portfolio_value_IA_list, label='IA optimize Portfolio Value', color='red')
     plt.plot(dates[window_size:], portfolio_value_stock_evolution_list, label='Baseline Portfolio Value', color='blue')
-    plt.plot(dates[window_size:], portfolio_value_my_algo_list, label='My algo Portfolio Value', color='green')
     plt.xlabel('Dates')
     plt.ylabel('Portfolio Value')
     plt.title('AAPL : IA Portfolio Value vs. Baseline Over Time')
@@ -171,23 +140,7 @@ def evaluate_model(df, model, dates):
     # Formater l'axe des x pour afficher les dates correctement
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
     plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=1))
-
     plt.gcf().autofmt_xdate(rotation=45)
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(dates[window_size:], data_momentum, label='Price momentum', color='black')
-    plt.plot(dates[window_size:], data[window_size:], label='Price', color='blue')
-    plt.xlabel('Dates')
-    plt.ylabel('Portfolio Value')
-    plt.title('AAPL : IA Portfolio Value vs. Baseline Over Time')
-    plt.legend()
-
-    # Formater l'axe des x pour afficher les dates correctement
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-    plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=1))
-
-    plt.gcf().autofmt_xdate(rotation=45)
-
     plt.show()
 
 
