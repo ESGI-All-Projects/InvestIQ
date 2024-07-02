@@ -7,23 +7,45 @@ from tqdm import tqdm
 # from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.callbacks import TensorBoard
 
-def train_LSTM_model(df):
-    data = df['c']
+def train_LSTM_model(df_train, df_val):
+    data_train = df_train['c']
+    data_val = df_val['c']
     # Taille de la fenetre
     window_size = 30
 
     # Créer des séquences d'entraînement
     X_train, y_train = [], []
-    for i in range(window_size, len(data)):
-        X_train.append(data.iloc[i - window_size:i])
-        y_train.append(data.iloc[i])
+    X_val, y_val = [], []
+    for i in range(window_size, len(data_train)):
+        X_train.append(data_train.iloc[i - window_size:i])
+        y_train.append(data_train.iloc[i])
+    for i in range(window_size, len(data_val)):
+        X_val.append(data_val.iloc[i - window_size:i])
+        y_val.append(data_val.iloc[i])
+
 
     X_train, y_train = np.array(X_train), np.array(y_train)
+    X_val, y_val = np.array(X_val), np.array(y_val)
+
     X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+    X_val = np.reshape(X_val, (X_val.shape[0], X_val.shape[1], 1))
 
     model = get_model(1)
-    model.fit(X_train, y_train, epochs=200, batch_size=32)
+
+    # Configurer TensorBoard
+    log_dir = "logs/LSTM/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
+
+    # Entraîner le modèle avec TensorBoard callback
+    model.fit(
+        X_train, y_train,
+        epochs=10,
+        batch_size=32,
+        validation_data=(X_val, y_val),
+        callbacks=[tensorboard_callback]
+    )
 
     model.save("models/LSTM/lstm_1D.keras")
 
