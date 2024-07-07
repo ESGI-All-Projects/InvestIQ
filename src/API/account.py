@@ -1,5 +1,6 @@
 import requests
 import json
+from datetime import datetime, timezone
 
 from API.authentification import load_token
 
@@ -19,7 +20,7 @@ def get_account():
 
     return respose_json
 
-def get_account_portfolio_history(period="1A", timeframe="1D"):
+def get_account_portfolio_gain(start_date):
     API_KEY, SECRET_KEY = load_token()
     url = "https://paper-api.alpaca.markets/v2/account/portfolio/history?intraday_reporting=market_hours&pnl_reset=per_day"
 
@@ -29,13 +30,19 @@ def get_account_portfolio_history(period="1A", timeframe="1D"):
         "APCA-API-SECRET-KEY": SECRET_KEY
     }
 
+    current_date = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     params = {
-        "period": period,
-        "timeframe": timeframe,
+        "timeframe": "1D",
+        "start": start_date.astimezone(timezone.utc).isoformat(),
+        "end": current_date,
+        "intraday_reporting": "continuous"
     }
 
     response = requests.get(url, headers=headers, params=params)
     historical_data_json = json.loads(response.text)
 
-    return historical_data_json
+    start_wallet = historical_data_json["equity"][0]
+    current_wallet = historical_data_json["equity"][-1]
+
+    return 1 - (current_wallet - start_wallet)/start_wallet, current_date
 

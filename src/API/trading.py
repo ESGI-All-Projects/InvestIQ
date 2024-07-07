@@ -1,8 +1,9 @@
 import requests
+import json
 
 from API.authentification import load_token
 
-def get_all_positions():
+def get_all_positions_repartition():
     API_KEY, SECRET_KEY = load_token()
     url = "https://paper-api.alpaca.markets/v2/positions"
 
@@ -13,7 +14,19 @@ def get_all_positions():
     }
 
     response = requests.get(url, headers=headers)
-    return response.text
+    positions_json = json.loads(response.text)
+
+    symbols = []
+    amounts = []
+    for p in positions_json:
+        symbols.append(p['symbol'])
+        amounts.append(float(p['market_value']))
+
+    total = sum(amounts)
+    pourcentages = [(amount / total) * 100 for amount in amounts]
+
+    return symbols, pourcentages
+
 
 def get_position(symbol):
     API_KEY, SECRET_KEY = load_token()

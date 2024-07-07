@@ -151,8 +151,27 @@ def evalutate_diff_algo(df, diff_list):
     plt.gcf().autofmt_xdate(rotation=45)
     plt.show()
 
+def plot_stock_evolution(df):
+    df = df[df['t'] > '2023-01-01']
+    dates = df['t']
+    dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S%z') for date in dates]
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(dates, df['c'])
+    plt.xlabel('Date')
+    plt.ylabel('Montant ($)')
+    plt.title('AAPL : Evolution de la valeur du stock au cours du temps en dollar')
+    plt.legend()
+
+    # Formater l'axe des x pour afficher les dates correctement
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+
+    plt.gcf().autofmt_xdate(rotation=45)
+    plt.show()
 
 if __name__ == "__main__":
     df = pd.read_csv("../../data/processed/historical_data_bars_1H_AAPL_with_indicators.csv")
-    evaluate_momentum_algo(df, [0.9, 0.95, 0.99, 0.995, 0.999])
+    # evaluate_momentum_algo(df, [0.9, 0.95, 0.99, 0.995, 0.999])
     # evalutate_diff_algo(df, [1, 10, 20, 40, 80])
+    plot_stock_evolution(df)

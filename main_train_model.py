@@ -1,19 +1,26 @@
 import pandas as pd
+import joblib
 
-# from stable_baselines3 import PPO
-# from sb3_contrib import RecurrentPPO
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
+from sb3_contrib import RecurrentPPO
 import tensorflow as tf
 
-# from environnement.stock_market_env import StockTradingEnv
-# from models.train_model import train_model, evaluate_model
-from models.train_LSTM_model import train_LSTM_model, evaluate_model, display_prediction
+from environnement.stock_market_env import StockTradingWindowEnv, StockTradingIndicatorsEnv
+from models.train_model import train_model
+from models.train_model import evaluate_model_window, evaluate_model_indicators
+from models.train_LSTM_model import train_LSTM_model, display_prediction, custom_loss
+from models.train_LSTM_model import evaluate_model as evaluate_model_LSTM
 
-data = pd.read_csv("data/processed/historical_data_bars_1D_AAPL_with_indicators.csv", sep=',')
-data = data.drop(['h','l','n','o','v','vw'], axis=1)
+data = pd.read_csv("data/processed/historical_data_bars_1H_AAPL_with_indicators.csv", sep=',')
+data = data.drop(['h','l','n','o','v','vw'], axis=1)[300:]
+# data = data.drop(['h','l','o','vw'], axis=1)
 # for column in data.columns:
 #     if 'days' in column:
 #         data = data.drop([column], axis=1)
 
+# Annule le split des actions par 4 le 31/08/2020 pour APPL
+data.loc[data['t'] > '2020-08-31', 'c'] *= 4
 
 data_train = data[data['t'] < '2022-01-01']
 data_val = data[(data['t'] < '2023-01-01') & (data['t'] >= '2022-01-01')]
@@ -28,21 +35,54 @@ data_val = data_val.drop('t', axis=1)
 data_test = data_test.drop('t', axis=1)
 
 
+def train_LSTM():
+    # train_LSTM_model(data_train, data_val, ['c', 'n', 'v'], 'AAPL_1H_cnv', epochs=100)
+    # model = tf.keras.models.load_model('models/LSTM/lstm_1D.keras', custom_objects={'custom_loss': custom_loss})
+    model = tf.keras.models.load_model('models/LSTM/AAPL_1H_cnv.keras')
+    scaler = joblib.load('models/LSTM/scaler_AAPL_1H_cnv.pkl')
 
-# env_train = StockTradingEnv(data_train)
-# env_test = StockTradingEnv(data_test)
+    display_prediction(data_test, model, scaler, ['c', 'n', 'v'])
+    evaluate_model_LSTM(data_test, model, date_test, scaler, ['c', 'n', 'v'])
 
-# train_model(env_train)
-#
-# # model = RecurrentPPO.load("models/first-model")
-# model = PPO.load("models/first-model")
-#
-# evaluate_model(env_train, model, date_train)
-# evaluate_model(env_test, model, date_test)
+def train_PPO_window():
+    def make_env(data):
+        def _init():
+            return StockTradingWindowEnv(data)
+        return _init
 
-train_LSTM_model(data_train, data_val)
-# model = tf.keras.models.load_model('models/LSTM/lstm_1D.keras')
+    env_train = DummyVecEnv([make_env(data_train['c'])])
+    env_test = DummyVecEnv([make_env(data_test['c'])])
+    env_train = VecNormalize(env_train, norm_obs=True, norm_reward=True)
+    env_test = VecNormalize(env_test, norm_obs=True, norm_reward=True)
 
-# display_prediction(data_test[:500], model)
-# evaluate_model(data_test, model, date_test)
+    model_name = 'window30_position'
+    train_model(env_train, model_name, total_timesteps=5_000_000)
 
+    # model = RecurrentPPO.load("models/first-model")
+    model = PPO.load(f"models/PPO/{model_name}")
+
+    evaluate_model_window(env_train, model, date_train)
+    evaluate_model_window(env_test, model, date_test)
+
+def train_PPO_indicators():
+    def make_env(data):
+        def _init():
+            return StockTradingIndicatorsEnv(data)
+        return _init
+
+    env_train = DummyVecEnv([make_env(data_train)])
+    env_test = DummyVecEnv([make_env(data_test)])
+    env_train = VecNormalize(env_train, norm_obs=True, norm_reward=True)
+    env_test = VecNormalize(env_test, norm_obs=True, norm_reward=True)
+
+    model_name = 'indicators_retry'
+    # train_model(env_train, model_name, total_timesteps=1_000_000)
+
+    # model = RecurrentPPO.load("models/first-model")
+    model = PPO.load(f"models/PPO/{model_name}")
+
+    evaluate_model_indicators(env_train, model, date_train)
+    evaluate_model_indicators(env_test, model, date_test)
+
+
+train_PPO_indicators()
