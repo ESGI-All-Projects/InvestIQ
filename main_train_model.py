@@ -7,8 +7,8 @@ from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
 import tensorflow as tf
 
 from environnement.stock_market_env import StockTradingWindowEnv, StockTradingIndicatorsEnv, MultiStockTradingEnv
-from models.train_model import train_model
-from models.train_model import evaluate_model_window, evaluate_model_indicators, evaluate_model_multi_actions
+from models.train_model_PPO import train_model
+from models.train_model_PPO import evaluate_model_window, evaluate_model_indicators, evaluate_model_multi_actions
 from models.train_LSTM_model import train_LSTM_model, display_prediction, custom_loss
 from models.train_LSTM_model import evaluate_model as evaluate_model_LSTM
 
@@ -100,7 +100,7 @@ def train_PPO_MultiActions():
     env_test = VecNormalize(env_test, norm_obs=True, norm_reward=True)
 
     model_name = 'multi_actions'
-    # train_model(env_train, model_name, total_timesteps=400_000)
+    train_model(env_train, model_name, total_timesteps=1_000_000)
 
     model = PPO.load(f"models/PPO/{model_name}")
 
