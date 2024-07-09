@@ -6,7 +6,7 @@ import datetime
 import matplotlib.pyplot as plt
 import gym
 from stable_baselines3 import PPO
-from sb3_contrib import RecurrentPPO
+# from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.vec_env.vec_frame_stack import VecFrameStack
@@ -134,6 +134,56 @@ def evaluate_model_indicators(env, model, dates):
     plt.xlabel('Dates')
     plt.ylabel('Portfolio Value')
     plt.title('AAPL : IA Portfolio Value vs. Baseline Over Time')
+    plt.legend()
+
+    # Formater l'axe des x pour afficher les dates correctement
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+
+    plt.gcf().autofmt_xdate(rotation=45)
+
+    plt.show()
+
+def evaluate_model_multi_actions(env, model, dates):
+    dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S%z') for date in dates]
+
+    obs = env.reset()
+
+    done = False
+    actions = []
+    portfolio_value = []
+    portfolio_value_baseline = []
+    cash = []
+    while not done:
+        action, _states = model.predict(obs)
+        obs, reward, done, info = env.step(action)
+        # episode_starts = done
+        # action, _ = model.predict(obs)
+        # obs, reward, done, _ = env.step(action)
+        if not done:
+            portfolio_value.append(env.venv.envs[0].calculate_buying_power())
+            portfolio_value_baseline.append(env.venv.envs[0].calculate_buying_power_baseline())
+            cash.append(env.venv.envs[0].cash)
+            actions.extend(action.flatten())
+
+    total = len(actions)
+    proportions = [actions.count(i) / total for i in range(3)]
+    # proportion_0 = actions.count(0) / total
+    # proportion_1 = actions.count(1) / total
+    # proportion_2 = actions.count(2) / total
+
+    print("Proportion de vente        :", proportions[0])
+    print("Proportion de ne rien faire:", proportions[1])
+    print("Proportion d'achat         :", proportions[2])
+
+    # Tracer les résultats
+    plt.figure(figsize=(10, 6))
+    plt.plot(dates[1:-1], portfolio_value, label='IA optimize Portfolio Value', color='red')
+    plt.plot(dates[1:-1], portfolio_value_baseline, label='Baseline Portfolio Value', color='blue')
+    plt.plot(dates[1:-1], cash, label='IA cash non investi', color='black')
+    plt.xlabel('Dates')
+    plt.ylabel('Portfolio Value')
+    plt.title('DJIA : IA Portfolio Value vs. Baseline Over Time')
     plt.legend()
 
     # Formater l'axe des x pour afficher les dates correctement

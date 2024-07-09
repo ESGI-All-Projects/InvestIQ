@@ -3,24 +3,28 @@ import joblib
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
-from sb3_contrib import RecurrentPPO
+# from sb3_contrib import RecurrentPPO
 import tensorflow as tf
 
-from environnement.stock_market_env import StockTradingWindowEnv, StockTradingIndicatorsEnv
+from environnement.stock_market_env import StockTradingWindowEnv, StockTradingIndicatorsEnv, MultiStockTradingEnv
 from models.train_model import train_model
-from models.train_model import evaluate_model_window, evaluate_model_indicators
+from models.train_model import evaluate_model_window, evaluate_model_indicators, evaluate_model_multi_actions
 from models.train_LSTM_model import train_LSTM_model, display_prediction, custom_loss
 from models.train_LSTM_model import evaluate_model as evaluate_model_LSTM
 
-data = pd.read_csv("data/processed/historical_data_bars_1H_AAPL_with_indicators.csv", sep=',')
-data = data.drop(['h','l','n','o','v','vw'], axis=1)[300:]
+# data = pd.read_csv("data/processed/historical_data_bars_1H_AAPL_with_indicators.csv", sep=',')
+data = pd.read_csv("data/processed/DJIA/historical_data_bars_1H_DJIA_with_indicators.csv", sep=',')
+# Suppression des colonnes pour 30 stocks
+delete_columns = [col for col in data.columns if col.startswith(("h__", "l__", "n__", "o__", "v__", "vw__"))]
+data = data.drop(delete_columns, axis=1)[500:]
+# data = data.drop(['h','l','n','o','v','vw'], axis=1)[300:]
 # data = data.drop(['h','l','o','vw'], axis=1)
 # for column in data.columns:
 #     if 'days' in column:
 #         data = data.drop([column], axis=1)
 
 # Annule le split des actions par 4 le 31/08/2020 pour APPL
-data.loc[data['t'] > '2020-08-31', 'c'] *= 4
+# data.loc[data['t'] > '2020-08-31', 'c'] *= 4
 
 data_train = data[data['t'] < '2022-01-01']
 data_val = data[(data['t'] < '2023-01-01') & (data['t'] >= '2022-01-01')]
@@ -84,5 +88,24 @@ def train_PPO_indicators():
     evaluate_model_indicators(env_train, model, date_train)
     evaluate_model_indicators(env_test, model, date_test)
 
+def train_PPO_MultiActions():
+    def make_env(data):
+        def _init():
+            return MultiStockTradingEnv(data)
+        return _init
 
-train_PPO_indicators()
+    env_train = DummyVecEnv([make_env(data_train)])
+    env_test = DummyVecEnv([make_env(data_test)])
+    env_train = VecNormalize(env_train, norm_obs=True, norm_reward=True)
+    env_test = VecNormalize(env_test, norm_obs=True, norm_reward=True)
+
+    model_name = 'multi_actions'
+    # train_model(env_train, model_name, total_timesteps=400_000)
+
+    model = PPO.load(f"models/PPO/{model_name}")
+
+    # evaluate_model_multi_actions(env_train, model, date_train)
+    evaluate_model_multi_actions(env_test, model, date_test)
+
+
+train_PPO_MultiActions()

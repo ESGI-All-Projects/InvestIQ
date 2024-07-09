@@ -3,7 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import datetime
-
+import glob
+import os
 
 def calcul_momentum(data, beta=0.995):
     m = data.iloc[0]
@@ -151,16 +152,18 @@ def evalutate_diff_algo(df, diff_list):
     plt.gcf().autofmt_xdate(rotation=45)
     plt.show()
 
-def plot_stock_evolution(df):
-    df = df[df['t'] > '2023-01-01']
+def plot_stock_evolution(df, name):
+    # df = df[df['t'] > '2023-01-01']
     dates = df['t']
-    dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S%z') for date in dates]
+    # dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S%z') for date in dates]
+    dates = [datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%SZ') for date in dates]
+
 
     plt.figure(figsize=(10, 6))
     plt.plot(dates, df['c'])
     plt.xlabel('Date')
     plt.ylabel('Montant ($)')
-    plt.title('AAPL : Evolution de la valeur du stock au cours du temps en dollar')
+    plt.title(f'{name} : Evolution de la valeur du stock au cours du temps en dollar')
     plt.legend()
 
     # Formater l'axe des x pour afficher les dates correctement
@@ -171,7 +174,15 @@ def plot_stock_evolution(df):
     plt.show()
 
 if __name__ == "__main__":
-    df = pd.read_csv("../../data/processed/historical_data_bars_1H_AAPL_with_indicators.csv")
+    # df = pd.read_csv("../../data/processed/historical_data_bars_1H_AAPL_with_indicators.csv")
     # evaluate_momentum_algo(df, [0.9, 0.95, 0.99, 0.995, 0.999])
     # evalutate_diff_algo(df, [1, 10, 20, 40, 80])
-    plot_stock_evolution(df)
+    # plot_stock_evolution(df)
+
+    chemin_csv = glob.glob(os.path.join("../../data/raw/DJIA", '*.csv'))
+
+    # Lire chaque CSV en DataFrame et les stocker dans une liste
+    liste_dataframes = [(pd.read_csv(fichier), fichier.split('_')[-1].split('.')[0]) for fichier in chemin_csv]
+    for df, name in liste_dataframes:
+
+        plot_stock_evolution(df, name)

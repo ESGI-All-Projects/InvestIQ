@@ -1,7 +1,8 @@
-import gym
-from gym import spaces
-# import gymnasium as gym
-# from gymnasium import spaces
+# import gym
+# from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
+
 # import pandas as pd
 import numpy as np
 # from stable_baselines.common.env_checker import check_env
@@ -217,20 +218,22 @@ class MultiStockTradingEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(self.n_stocks * (self.n_features + 2) + 1),
+            shape=(self.n_stocks * (self.n_features + 2) + 1,),
             dtype=np.float32
         )
 
         self.reset()
 
-    def reset(self):
+    def reset(self, **kwargs):
         self.current_step = 0
         self.cash = 100000  # Initial cash in hand
         self.positions = np.zeros(self.n_stocks)  # Number of shares held
         self.invested_amount = np.zeros(self.n_stocks)  # Amount invested in each stock
         self.previous_portfolio_value = self.cash  # Initial portfolio value (cash only)
+        self.portfolio_value = self.cash
+        self.baseline_quota = self.cash / np.sum(self.stock_data.iloc[self.current_step, :self.n_stocks])
 
-        return self._next_observation()
+        return self._next_observation(), {}
 
     def _next_observation(self):
         # Get data for the current step
@@ -241,8 +244,8 @@ class MultiStockTradingEnv(gym.Env):
             obs,
             self.positions,
             self.invested_amount,
-            self.cash
-        ], axis=1)
+            [self.cash]
+        ])
 
         return full_obs
 
@@ -256,7 +259,7 @@ class MultiStockTradingEnv(gym.Env):
         self.previous_portfolio_value = self._calculate_portfolio_value()
         obs = self._next_observation()
 
-        return obs, reward, done, {}
+        return obs, reward, done, False, {}
 
     def _take_action(self, action):
         # First, execute sell actions
@@ -267,22 +270,42 @@ class MultiStockTradingEnv(gym.Env):
                 self.positions[i] = 0
                 self.invested_amount[i] = 0
 
-        # Then, execute buy actions
-        for i, act in enumerate(action):
-            if act == 2:  # Buy
-                stock_price = self.stock_data.iloc[self.current_step, i]
-                if self.cash > 1000:  # Buy one share if enough cash
-                    self.positions[i] += 1000/stock_price
-                    self.invested_amount[i] += 1000
-                    self.cash -= 1000
+        # # Then, execute buy actions
+        # for i, act in enumerate(action):
+        #     if act == 2:  # Buy
+        #         stock_price = self.stock_data.iloc[self.current_step, i]
+        #         if self.cash > 1000:
+        #             self.positions[i] += 1000/stock_price
+        #             self.invested_amount[i] += 1000
+        #             self.cash -= 1000
+
+        while self.cash >= 1000:
+            any_buy_executed = False
+            for i, act in enumerate(action):
+                if act == 2:  # Buy
+                    stock_price = self.stock_data.iloc[self.current_step, i]
+                    if self.cash > 1000:
+                        self.positions[i] += 1000 / stock_price
+                        self.invested_amount[i] += 1000
+                        self.cash -= 1000
+                        any_buy_executed = True
+            # Break the loop if no buy action was executed to prevent infinite loop
+            if not any_buy_executed:
+                break
 
     def _calculate_portfolio_value(self):
-        portfolio_value = self.cash + np.sum(self.positions * self.stock_data.iloc[self.current_step, :self.n_stocks])
-        return portfolio_value
+        self.portfolio_value = self.cash + np.sum(self.positions * self.stock_data.iloc[self.current_step, :self.n_stocks])
+        return self.portfolio_value
 
     def _calculate_reward(self):
         reward = self._calculate_portfolio_value() - self.previous_portfolio_value
         return reward
+
+    def calculate_buying_power(self):
+        return self.portfolio_value
+
+    def calculate_buying_power_baseline(self):
+        return self.baseline_quota * np.sum(self.stock_data.iloc[self.current_step, :self.n_stocks])
 
     def render(self, mode='human'):
         pass
