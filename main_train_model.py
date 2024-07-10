@@ -6,7 +6,7 @@ from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
 # from sb3_contrib import RecurrentPPO
 import tensorflow as tf
 
-from environnement.stock_market_env import StockTradingWindowEnv, StockTradingIndicatorsEnv, MultiStockTradingEnv
+from environnement.stock_market_env import StockTradingWindowEnv, StockTradingIndicatorsEnv, MultiStockTradingEnv, MultiStockRepartitionTradingEnv
 from models.train_model_PPO import train_model
 from models.train_model_PPO import evaluate_model_window, evaluate_model_indicators, evaluate_model_multi_actions
 from models.train_LSTM_model import train_LSTM_model, display_prediction, custom_loss
@@ -22,9 +22,6 @@ data = data.drop(delete_columns, axis=1)[500:]
 # for column in data.columns:
 #     if 'days' in column:
 #         data = data.drop([column], axis=1)
-
-# Annule le split des actions par 4 le 31/08/2020 pour APPL
-# data.loc[data['t'] > '2020-08-31', 'c'] *= 4
 
 data_train = data[data['t'] < '2022-01-01']
 data_val = data[(data['t'] < '2023-01-01') & (data['t'] >= '2022-01-01')]
@@ -59,13 +56,13 @@ def train_PPO_window():
     env_train = VecNormalize(env_train, norm_obs=True, norm_reward=True)
     env_test = VecNormalize(env_test, norm_obs=True, norm_reward=True)
 
-    model_name = 'window30_position'
-    train_model(env_train, model_name, total_timesteps=5_000_000)
+    model_name = 'window30'
+    # train_model(env_train, model_name, total_timesteps=1_000_000)
 
     # model = RecurrentPPO.load("models/first-model")
     model = PPO.load(f"models/PPO/{model_name}")
 
-    evaluate_model_window(env_train, model, date_train)
+    # evaluate_model_window(env_train, model, date_train)
     evaluate_model_window(env_test, model, date_test)
 
 def train_PPO_indicators():
@@ -79,7 +76,7 @@ def train_PPO_indicators():
     env_train = VecNormalize(env_train, norm_obs=True, norm_reward=True)
     env_test = VecNormalize(env_test, norm_obs=True, norm_reward=True)
 
-    model_name = 'indicators_retry'
+    model_name = 'indicators_1H_1D'
     # train_model(env_train, model_name, total_timesteps=1_000_000)
 
     # model = RecurrentPPO.load("models/first-model")
@@ -107,5 +104,24 @@ def train_PPO_MultiActions():
     # evaluate_model_multi_actions(env_train, model, date_train)
     evaluate_model_multi_actions(env_test, model, date_test)
 
+def train_PPO_MultiActions_repartition():
+    def make_env(data):
+        def _init():
+            return MultiStockRepartitionTradingEnv(data)
+        return _init
 
-train_PPO_MultiActions()
+    env_train = DummyVecEnv([make_env(data_train)])
+    env_test = DummyVecEnv([make_env(data_test)])
+    env_train = VecNormalize(env_train, norm_obs=True, norm_reward=True)
+    env_test = VecNormalize(env_test, norm_obs=True, norm_reward=True)
+
+    model_name = 'multi_actions_repartition'
+    train_model(env_train, model_name, total_timesteps=5000, policy="SOFTMAX")
+
+    model = PPO.load(f"models/PPO/{model_name}")
+
+    # evaluate_model_multi_actions(env_train, model, date_train)
+    evaluate_model_multi_actions(env_test, model, date_test)
+
+
+train_PPO_MultiActions_repartition()

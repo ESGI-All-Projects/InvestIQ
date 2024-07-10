@@ -8,13 +8,21 @@ import gym
 from stable_baselines3 import PPO
 # from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.vec_env import DummyVecEnv
-from stable_baselines3.common.vec_env.vec_frame_stack import VecFrameStack
+# from stable_baselines3.common.vec_env import DummyVecEnv
+# from stable_baselines3.common.vec_env.vec_frame_stack import VecFrameStack
+# from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from stable_baselines3.common.policies import ActorCriticPolicy
+import torch.nn as nn
 
 
-def train_model(env, model_name, total_timesteps):
-
-    model = PPO("MlpPolicy",
+def train_model(env, model_name, total_timesteps, policy="MLP"):
+    if policy == "MLP":
+        policy_config = "MlpPolicy"
+    elif policy == "SOFTMAX":
+        policy_config = SoftmaxPolicy
+    else:
+        raise Exception(f"policy {policy} unknow")
+    model = PPO(policy_config,
                 env,
                 device='cuda',
                 n_steps=2048,
@@ -40,6 +48,25 @@ def train_model(env, model_name, total_timesteps):
     # model.learn(total_timesteps=total_timesteps)
     model.save(f"models/PPO/{model_name}")
 
+class SoftmaxPolicy(ActorCriticPolicy):
+    def __init__(self, *args, **kwargs):
+        super(SoftmaxPolicy, self).__init__(*args, **kwargs)
+        # Override the action_net with a softmax layer
+        self.action_net = nn.Sequential(
+            nn.Linear(self.net_arch["pi"][-1], self.action_space.shape[0]),
+            nn.Softmax(dim=1)
+        )
+
+    def _predict(self, observation, deterministic: bool = False):
+        features = self.extract_features(observation)
+        # Apply the action_net to get the softmax output
+        action_probs = self.action_net(features)
+        return action_probs, features
+
+    def _get_action_dist_from_latent(self, latent_pi):
+        mean_actions = self.action_net(latent_pi)
+        # return self.action_dist.proba_distribution(mean_actions)
+        return mean_actions
 def evaluate_model_window(env, model, dates):
     dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S%z') for date in dates]
 
@@ -52,8 +79,8 @@ def evaluate_model_window(env, model, dates):
     # episode_starts = np.ones((num_envs,), dtype=bool)
     done = False
     actions = []
-    portfolio_value = [env.venv.envs[0].gym_env.calculate_buying_power()]
-    portfolio_value_baseline = [env.venv.envs[0].gym_env.calculate_buying_power_baseline()]
+    portfolio_value = [env.venv.envs[0].calculate_buying_power()]
+    portfolio_value_baseline = [env.venv.envs[0].calculate_buying_power_baseline()]
     while not done:
         # action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True)
         action, _states = model.predict(obs)
@@ -62,8 +89,8 @@ def evaluate_model_window(env, model, dates):
         # action, _ = model.predict(obs)
         # obs, reward, done, _ = env.step(action)
         if not done:
-            portfolio_value.append(env.venv.envs[0].gym_env.calculate_buying_power())
-            portfolio_value_baseline.append(env.venv.envs[0].gym_env.calculate_buying_power_baseline())
+            portfolio_value.append(env.venv.envs[0].calculate_buying_power())
+            portfolio_value_baseline.append(env.venv.envs[0].calculate_buying_power_baseline())
             actions.append(action)
 
     total = len(actions)
@@ -114,8 +141,8 @@ def evaluate_model_indicators(env, model, dates):
         # action, _ = model.predict(obs)
         # obs, reward, done, _ = env.step(action)
         if not done:
-            portfolio_value.append(env.venv.envs[0].gym_env.calculate_buying_power())
-            portfolio_value_baseline.append(env.venv.envs[0].gym_env.calculate_buying_power_baseline())
+            portfolio_value.append(env.venv.envs[0].calculate_buying_power())
+            portfolio_value_baseline.append(env.venv.envs[0].calculate_buying_power_baseline())
             actions.append(action)
 
     total = len(actions)
