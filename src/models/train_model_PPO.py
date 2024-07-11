@@ -98,9 +98,9 @@ def evaluate_model_window(env, model, dates):
     proportion_1 = actions.count(1) / total
     proportion_2 = actions.count(2) / total
 
-    print("Proportion de 0:", proportion_0)
-    print("Proportion de 1:", proportion_1)
-    print("Proportion de 2:", proportion_2)
+    print("Proportion de vente        :", proportion_0)
+    print("Proportion de ne rien faire:", proportion_1)
+    print("Proportion d'achat         :", proportion_2)
 
     # Tracer les résultats
     plt.figure(figsize=(10, 6))
@@ -123,6 +123,7 @@ def evaluate_model_indicators(env, model, dates):
     dates = [datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S%z') for date in dates]
 
     obs = env.reset()
+    init_price = env.venv.envs[0].data.iloc[0]['c']
 
     # cell and hidden state of the LSTM
     # lstm_states = None
@@ -145,29 +146,62 @@ def evaluate_model_indicators(env, model, dates):
             portfolio_value_baseline.append(env.venv.envs[0].calculate_buying_power_baseline())
             actions.append(action)
 
+    ratio_IA = []
+    ratio_baseline = []
+    for value_IA, value_baseline in zip(portfolio_value, portfolio_value_baseline):
+        ratio_IA.append((value_IA - (10000 - init_price))/init_price)
+        ratio_baseline.append((value_baseline - (10000 - init_price)) / init_price)
+
     total = len(actions)
     proportion_0 = actions.count(0) / total
     proportion_1 = actions.count(1) / total
     proportion_2 = actions.count(2) / total
 
-    print("Proportion de 0:", proportion_0)
-    print("Proportion de 1:", proportion_1)
-    print("Proportion de 2:", proportion_2)
+    print("Proportion de vente        :", proportion_0)
+    print("Proportion de ne rien faire:", proportion_1)
+    print("Proportion d'achat         :", proportion_2)
 
     # Tracer les résultats
-    plt.figure(figsize=(10, 6))
-    plt.plot(dates[1:-1], portfolio_value, label='IA optimize Portfolio Value', color='red')
-    plt.plot(dates[1:-1], portfolio_value_baseline, label='Baseline Portfolio Value', color='blue')
-    plt.xlabel('Dates')
-    plt.ylabel('Portfolio Value')
-    plt.title('AAPL : IA Portfolio Value vs. Baseline Over Time')
-    plt.legend()
+    # plt.figure(figsize=(10, 6))
+    # # plt.plot(dates[1:-1], portfolio_value, label='IA optimize Portfolio Value', color='red')
+    # # plt.plot(dates[1:-1], portfolio_value_baseline, label='Baseline Portfolio Value', color='blue')
+    # plt.plot(dates[1:-1], ratio_IA, label='IA optimize Portfolio Value', color='red')
+    # plt.plot(dates[1:-1], ratio_baseline, label='Baseline Portfolio Value', color='blue')
+    # plt.xlabel('Dates')
+    # plt.ylabel('Portfolio Value')
+    # plt.title('AAPL : IA Portfolio Value vs. Baseline Over Time')
+    # plt.legend()
+    #
+    # # Formater l'axe des x pour afficher les dates correctement
+    # plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    # plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+    #
+    # plt.gcf().autofmt_xdate(rotation=45)
+    #
+    # plt.show()
 
-    # Formater l'axe des x pour afficher les dates correctement
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-    plt.gca().xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+    # Plotting the results
+    fig, ax1 = plt.subplots(figsize=(10, 6))
 
-    plt.gcf().autofmt_xdate(rotation=45)
+    ax2 = ax1.twinx()
+    ax1.plot(dates[1:-1], portfolio_value, label='IA Portfolio Value', color='red')
+    ax1.plot(dates[1:-1], portfolio_value_baseline, label='Baseline Portfolio Value', color='blue')
+    ax2.plot(dates[1:-1], ratio_IA, color='red')
+    ax2.plot(dates[1:-1], ratio_baseline, color='blue')
+
+    ax1.set_xlabel('Dates')
+    ax1.set_ylabel('Portfolio Value')
+    ax2.set_ylabel('Action ratio gain')
+
+    ax1.set_title('AAPL : IA Portfolio Value vs. Baseline Over Time')
+
+    ax1.legend(loc='upper left')
+
+    # Formatting the x-axis to display dates correctly
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    ax1.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+
+    fig.autofmt_xdate(rotation=45)
 
     plt.show()
 
