@@ -57,8 +57,11 @@ def build_feature_DJIA():
 
     combined_df.to_csv("data/processed/DJIA/historical_data_bars_1H_DJIA_with_indicators.csv", index=False)
 
-df_AAPL = pd.read_csv('data/raw/historical_data_bars_1H_AAPL.csv')
-df_AAPL.loc[df_AAPL['t'] > '2020-08-31', 'c'] *= 4 # Annule le split des actions par 4 le 31/08/2020 pour APPL
-df_AAPL = add_indicators(df_AAPL)
-df_AAPL.to_csv("data/processed/historical_data_bars_1H_AAPL_with_indicators.csv", index=False)
-# build_feature_DJIA()
+def build_feature_AAPL():
+    df_AAPL = pd.read_csv('data/raw/historical_data_bars_1H_AAPL.csv')
+    df_AAPL.loc[df_AAPL['t'] > '2020-08-31', 'c'] *= 4 # Annule le split des actions par 4 le 31/08/2020 pour APPL
+    df_AAPL = add_indicators(df_AAPL)
+    df_AAPL.to_csv("data/processed/historical_data_bars_1H_AAPL_with_indicators.csv", index=False)
+
+build_feature_DJIA()
+build_feature_AAPL()

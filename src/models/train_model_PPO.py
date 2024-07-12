@@ -4,7 +4,6 @@ import matplotlib.dates as mdates
 import datetime
 
 import matplotlib.pyplot as plt
-import gym
 from stable_baselines3 import PPO
 # from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.callbacks import BaseCallback
@@ -266,7 +265,6 @@ class RewardLoggingCallback(BaseCallback):
         self.rewards_accum = []
     def _on_step(self) -> bool:
         # Calculate and log the reward
-        # self.logger.record("reward", self.locals["rewards"])
         self.rewards_accum.append(self.locals["rewards"])
         self.step_counter += 1
         if self.step_counter % self.n_steps == 0:
@@ -276,6 +274,4 @@ class RewardLoggingCallback(BaseCallback):
 
             # Reset accumulators
             self.rewards_accum = []
-        # portfolio_value = self.env.venv.envs[0].gym_env.calculate_buying_power()
-        # self.logger.record("portfolio_value", portfolio_value)
         return True
